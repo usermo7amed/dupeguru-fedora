@@ -69,7 +69,7 @@ jobs:
           QT_QPA_PLATFORM: offscreen
         run: |
           set -eux
-          RPM="$(find rpmbuild/RPMS -type f -name 'dupeguru-*.rpm' -print -quit)"
+          RPM="$(find rpmbuild/RPMS -type f -name 'dupeguru-[0-9]*.rpm' -print -quit)"
           test -n "$RPM"
           rpm -qpl "$RPM"
           dnf -y install "$RPM"
