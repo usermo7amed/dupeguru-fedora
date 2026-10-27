@@ -1,9 +1,10 @@
-name: Fedora 44 build
+name: Fedora 44 GNOME build and RPM
 
 on:
   push:
     branches:
       - fedora44-ci-packaging
+      - fedora44-gnome-rpm
   pull_request:
     branches:
       - master
@@ -23,43 +24,58 @@ jobs:
           dnf -y upgrade --refresh
           dnf -y install \
             git make gcc gcc-c++ python3 python3-devel python3-pip \
+            python3-setuptools python3-pytest python3-sphinx python3-polib \
+            python3-distro python3-mutagen python3-semantic_version \
+            python3-send2trash python3-xxhash \
             python3-qt5 python3-qt5-devel qt5-qttools-devel \
-            gettext
+            gettext rpm-build desktop-file-utils
           dnf clean all
 
       - name: Check out source
         uses: actions/checkout@v4
 
-      - name: Create Linux build environment
-        run: |
-          python3 -m venv --system-site-packages .venv
-          .venv/bin/python -m pip install --upgrade pip setuptools wheel
-          .venv/bin/python -m pip install -r requirements.txt -r requirements-extra.txt
-
       - name: Report Fedora toolchain
         run: |
           python3 --version
-          .venv/bin/python -m pip --version
-          .venv/bin/python -c "from PyQt5 import QtCore; print('Qt', QtCore.QT_VERSION_STR, 'PyQt', QtCore.PYQT_VERSION_STR)"
+          rpm --version
+          python3 -c "from PyQt5 import QtCore; print('Qt', QtCore.QT_VERSION_STR, 'PyQt', QtCore.PYQT_VERSION_STR)"
           command -v pyrcc5
 
-      - name: Build Linux native extensions
-        run: .venv/bin/python build.py --modules
+      - name: Build application and native extensions
+        env:
+          QT_QPA_PLATFORM: offscreen
+        run: python3 build.py
 
-      - name: Build Qt resources
+      - name: Run regression tests
+        env:
+          QT_QPA_PLATFORM: offscreen
+        run: python3 -m pytest -q core hscommon
+
+      - name: Validate GNOME desktop entry
+        run: desktop-file-validate pkg/dupeguru.desktop
+
+      - name: Build Fedora RPM
         run: |
-          pyrcc5 qt/dg.qrc > qt/dg_rc.py
-          .venv/bin/python -c "import qt.dg_rc"
+          set -eux
+          VERSION="$(python3 -c 'from core import __version__; print(__version__)')"
+          mkdir -p "$PWD/rpmbuild"/{BUILD,BUILDROOT,RPMS,SOURCES,SPECS,SRPMS}
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          git archive --format=tar.gz --prefix="dupeguru-$VERSION/" HEAD > "rpmbuild/SOURCES/dupeguru-$VERSION.tar.gz"
+          rpmbuild -bb --define "_topdir $PWD/rpmbuild" pkg/rpm/dupeguru.spec
 
-      - name: Build translations
-        run: .venv/bin/python build.py --loc
-
-      - name: Run Linux regression tests
+      - name: Install and inspect the built RPM
         env:
           QT_QPA_PLATFORM: offscreen
-        run: .venv/bin/python -m pytest -q core hscommon
-
-      - name: Build application and help
-        env:
-          QT_QPA_PLATFORM: offscreen
-        run: .venv/bin/python build.py
+        run: |
+          set -eux
+          RPM="$(find rpmbuild/RPMS -type f -name 'dupeguru-*.rpm' -print -quit)"
+          test -n "$RPM"
+          rpm -qpl "$RPM"
+          dnf -y install "$RPM"
+          desktop-file-validate /usr/share/applications/dupeguru.desktop
+          test -x /usr/bin/dupeguru
+          test -f /usr/libexec/dupeguru/qt/dg_rc.py
+          test -f /usr/share/icons/hicolor/128x128/apps/dupeguru.png
+          python3 -c "import sys; sys.path.insert(0, '/usr/libexec/dupeguru'); import core, hscommon, qt.dg_rc; print('Installed application modules import successfully')"
+          dnf -y remove dupeguru
+          test ! -e /usr/bin/dupeguru
