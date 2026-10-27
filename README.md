@@ -77,6 +77,10 @@ This can be made a one-liner (once in the directory) as:
 
     $ bash -c "python3 -m venv --system-site-packages env && source env/bin/activate && pip install -r requirements.txt -r requirements-extra.txt && python build.py --clean && python package.py"
 
+## Fedora 44 (fork work in progress)
+
+This fork is adding a Fedora 44 build/test baseline before changing compatibility constraints or publishing an RPM. See [Fedora 44 support notes](docs/fedora44.md) and the [Fedora 44 CI workflow](.github/workflows/fedora44.yml). A passing CI job and a clean RPM install/run test are required before Fedora 44 support can be called complete.
+
 ## Running tests
 
 The complete test suite is run with [Tox 1.7+][tox]. If you have it installed system-wide, you
