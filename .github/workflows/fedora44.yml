@@ -64,6 +64,14 @@ jobs:
           git archive --format=tar.gz --prefix="dupeguru-$VERSION/" HEAD > "rpmbuild/SOURCES/dupeguru-$VERSION.tar.gz"
           rpmbuild -bb --define "_topdir $PWD/rpmbuild" pkg/rpm/dupeguru.spec
 
+      - name: Upload Fedora RPM artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: dupeguru-fedora44-x86_64-rpm
+          path: rpmbuild/RPMS/x86_64/dupeguru-[0-9]*.rpm
+          if-no-files-found: error
+          retention-days: 30
+
       - name: Install and inspect the built RPM
         env:
           QT_QPA_PLATFORM: offscreen
