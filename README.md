@@ -1,101 +1,67 @@
-# dupeGuru
+# dupeGuru — Fedora/Linux development fork
 
-[dupeGuru][dupeguru] is a cross-platform (Linux, OS X, Windows) GUI tool to find duplicate files in
-a system. It is written mostly in Python 3 and uses [qt](https://www.qt.io/) for the UI.
+[dupeGuru][dupeguru] is a desktop application for finding duplicate files. This fork focuses on
+building, testing, packaging, and running dupeGuru on Linux, with **Fedora 44 as the primary target**.
 
-## Current status
-Still looking for additional help especially with regards to:
-* OSX maintenance: reproducing bugs, packaging verification.
-* Linux maintenance: reproducing bugs, maintaining PPA repository, Debian package, rpm package.
-* Translations: updating missing strings, transifex project at https://www.transifex.com/voltaicideas/dupeguru-1
-* Documentation: keeping it up-to-date.
+## Project scope
 
-## Contents of this folder
+This fork's active CI and packaging work targets Fedora 44. Windows- and macOS-specific build
+instructions and packaging checks are intentionally out of scope here. The upstream project may
+continue to support other operating systems; this fork does not claim to validate them.
 
-This folder contains the source for dupeGuru. Its documentation is in `help`, but is also
-[available online][documentation] in its built form. Here's how this source tree is organized:
+## Source layout
 
-* core: Contains the core logic code for dupeGuru. It's Python code.
-* qt: UI code for the Qt toolkit. It's written in Python and uses PyQt.
-* images: Images used by the different UI codebases.
-* pkg: Skeleton files required to create different packages
-* help: Help document, written for Sphinx.
-* locale: .po files for localization.
-* hscommon: A collection of helpers used across HS applications.
+- `core`: duplicate detection and application logic.
+- `qt`: Qt desktop UI and resources.
+- `hscommon`: shared helper code.
+- `images`: application artwork.
+- `pkg`: packaging support files.
+- `help`: application documentation.
+- `locale`: translations.
 
-## How to build dupeGuru from source
+## Fedora 44 system dependencies
 
-### Windows & macOS specific additional instructions
-For windows instructions see the [Windows Instructions](Windows.md).
+Install the Fedora development tools and Qt/PyQt packages:
 
-For macos instructions (qt version) see the [macOS Instructions](macos.md).
+```bash
+sudo dnf install git make gcc gcc-c++ python3 python3-devel python3-pip \
+  python3-qt5 python3-qt5-devel qt5-qttools-devel gettext
+```
 
-### Prerequisites
-* [Python 3.7+][python]
-* PyQt5
+Package names can vary by Fedora release/repository. If a package is unavailable, verify the
+current Fedora 44 package name before substituting another package.
 
-### System Setup
-When running in a linux based environment the following system packages or equivalents are needed to build:
-* python3-pyqt5
-* pyqt5-dev-tools (on some systems, see note)
-* python3-venv (only if using a virtual environment)
-* python3-dev
-* build-essential
+## Build and run locally
 
-Note: On some linux systems pyrcc5 is not put on the path when installing python3-pyqt5, this will cause some issues with the resource files (and icons). These systems should have a respective pyqt5-dev-tools package, which should also be installed. The presence of pyrcc5 can be checked with `which pyrcc5`.  Debian based systems need the extra package, and Arch does not.
+From the repository root:
 
-To create packages the following are also needed:
-* python3-setuptools
-* debhelper
+```bash
+python3 -m venv --system-site-packages .venv
+.venv/bin/python -m pip install --upgrade pip setuptools wheel
+.venv/bin/python -m pip install -r requirements.txt -r requirements-extra.txt
+.venv/bin/python build.py --modules
+pyrcc5 qt/dg.qrc > qt/dg_rc.py
+.venv/bin/python build.py --loc
+.venv/bin/python run.py
+```
 
-### Building with Make
-dupeGuru comes with a makefile that can be used to build and run:
+The workflow uses Fedora 44 and is the canonical automated baseline:
+[Fedora 44 CI workflow](.github/workflows/fedora44.yml).
 
-    $ make && make run
+## Tests
 
-### Building without Make
+```bash
+QT_QPA_PLATFORM=offscreen .venv/bin/python -m pytest -q core hscommon
+```
 
-    $ cd <dupeGuru directory>
-    $ python3 -m venv --system-site-packages ./env
-    $ source ./env/bin/activate
-    $ pip install -r requirements.txt
-    $ python build.py
-    $ python run.py
+The tox configuration runs the project checks using the available Python interpreter. Fedora 44
+CI is the release-target validation; this fork does not maintain a Windows/macOS test matrix.
 
-### Generating Debian/Ubuntu package
-To generate packages the extra requirements in requirements-extra.txt must be installed, the
-steps are as follows:
+## Fedora 44 readiness
 
-    $ cd <dupeGuru directory>
-    $ python3 -m venv --system-site-packages ./env
-    $ source ./env/bin/activate
-    $ pip install -r requirements.txt -r requirements-extra.txt
-    $ python build.py --clean
-    $ python package.py
-
-This can be made a one-liner (once in the directory) as:
-
-    $ bash -c "python3 -m venv --system-site-packages env && source env/bin/activate && pip install -r requirements.txt -r requirements-extra.txt && python build.py --clean && python package.py"
-
-## Fedora 44 (fork work in progress)
-
-This fork is adding a Fedora 44 build/test baseline before changing compatibility constraints or publishing an RPM. See [Fedora 44 support notes](docs/fedora44.md) and the [Fedora 44 CI workflow](.github/workflows/fedora44.yml). A passing CI job and a clean RPM install/run test are required before Fedora 44 support can be called complete.
-
-## Running tests
-
-The complete test suite is run with [Tox 1.7+][tox]. If you have it installed system-wide, you
-don't even need to set up a virtualenv. Just `cd` into the root project folder and run `tox`.
-
-If you don't have Tox system-wide, install it in your virtualenv with `pip install tox` and then
-run `tox`.
-
-You can also run automated tests without Tox. Extra requirements for running tests are in
-`requirements-extra.txt`. So, you can do `pip install -r requirements-extra.txt` inside your
-virtualenv and then `py.test core hscommon`
+See [Fedora 44 support notes](docs/fedora44.md) for the staged compatibility work, RPM packaging
+requirements, clean installation/uninstallation checks, and release criteria. Fedora 44 support
+must not be considered complete until CI passes and the application has been tested in a clean
+Fedora desktop environment.
 
 [dupeguru]: https://dupeguru.voltaicideas.net/
-[cross-toolkit]: http://www.hardcoded.net/articles/cross-toolkit-software
-[documentation]: http://dupeguru.voltaicideas.net/help/en/
-[python]: http://www.python.org/
-[pyqt]: http://www.riverbankcomputing.com
-[tox]: https://tox.readthedocs.org/en/latest/
