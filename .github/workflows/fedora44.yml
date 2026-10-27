@@ -25,7 +25,7 @@ jobs:
           dnf -y install \
             git make gcc gcc-c++ python3 python3-devel python3-pip \
             python3-setuptools python3-pytest python3-sphinx python3-polib \
-            python3-distro python3-mutagen python3-semantic-version \
+            python3-distro python3-mutagen python3-semantic_version \
             python3-send2trash python3-xxhash \
             python3-qt5 python3-qt5-devel qt5-qttools-devel \
             gettext rpm-build desktop-file-utils
