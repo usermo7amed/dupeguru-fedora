@@ -59,6 +59,7 @@ jobs:
           set -eux
           VERSION="$(python3 -c 'from core import __version__; print(__version__)')"
           mkdir -p "$PWD/rpmbuild"/{BUILD,BUILDROOT,RPMS,SOURCES,SPECS,SRPMS}
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
           git archive --format=tar.gz --prefix="dupeguru-$VERSION/" HEAD > "rpmbuild/SOURCES/dupeguru-$VERSION.tar.gz"
           rpmbuild -bb --define "_topdir $PWD/rpmbuild" pkg/rpm/dupeguru.spec
 
