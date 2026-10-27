@@ -1,35 +1,32 @@
 # Fedora 44 support
 
-This fork is being prepared for Fedora 44 and its system Python/Qt stack. A successful
-source checkout or successful compilation of one module is not, by itself, proof that the
-application is ready to install or run.
+This fork focuses on Fedora 44 and Linux. Windows/macOS CI matrices, packaging work, and platform-
+specific build instructions are out of scope. This does not mean upstream has dropped support for
+those systems; it means this fork only validates Fedora/Linux.
 
 ## Validation stages
 
-1. **Reproducible baseline:** run the `.github/workflows/fedora44.yml` workflow in a
-   Fedora 44 container and record the exact failing step, Python version, Qt/PyQt versions,
-   and dependency versions.
-2. **Python compatibility:** fix source/API and dependency constraints only where the
-   Fedora 44 build or tests demonstrate a real incompatibility. Do not raise the minimum
-   supported Python version without checking the project's intended cross-platform support.
-3. **Qt integration:** verify that the resource compiler is available, generated resources
-   import correctly, and the UI can start with Qt's offscreen platform in headless CI.
-4. **Regression tests:** run the existing core/helper tests, add focused tests for each
-   compatibility fix, and check that native extensions are built for the interpreter used
-   by the application.
-5. **RPM packaging:** add a Fedora RPM spec after the dependency and install layout are
-   confirmed. Prefer Fedora system packages for Python dependencies and Qt, declare runtime
-   requirements explicitly, install files under standard system paths, and provide a desktop
-   entry/icon. The package must not depend on a developer virtual environment.
-6. **Install/uninstall verification:** build the RPM in a clean Fedora 44 environment, inspect
-   it with RPM tools, install it, launch the app, verify desktop integration, and uninstall it.
-7. **Documentation/release:** document the supported Fedora release, install/build commands,
-   known limitations, and a reproducible version/release procedure.
+1. **Reproducible baseline:** run the `.github/workflows/fedora44.yml` workflow in a Fedora 44
+   container and record the exact failing step, Python version, Qt/PyQt versions, and dependency versions.
+2. **Python compatibility:** fix source/API and dependency constraints only where the Fedora 44
+   build or tests demonstrate a real incompatibility. Avoid unnecessary version changes.
+3. **Qt integration:** verify that the resource compiler is available, generated resources import
+   correctly, and the UI can start in a headless test environment.
+4. **Linux regression tests:** run the core/helper test suite and add focused tests for each
+   compatibility fix. Native extensions must be built for the same interpreter used by the app.
+5. **RPM packaging:** add a Fedora RPM spec after dependency and install layout are confirmed.
+   Prefer Fedora system packages for Python dependencies and Qt, declare runtime requirements,
+   install files under standard system paths, and provide a desktop entry and icon. The installed
+   package must not depend on a developer virtual environment.
+6. **Install/uninstall verification:** build the RPM in a clean Fedora 44 environment, inspect it
+   with RPM tools, install it, launch the app, verify desktop integration, and uninstall it without
+   removing user data.
+7. **Documentation/release:** document tested Fedora versions, installation/build commands, known
+   limitations, and a reproducible version/release procedure.
 
 ## Local baseline
 
-Install the Fedora build tools and Qt/PyQt development packages corresponding to the names
-used in the workflow. Then run:
+Install the Fedora build tools and Qt/PyQt development packages listed in the workflow. Then run:
 
 ```bash
 python3 -m venv --system-site-packages .venv
@@ -41,17 +38,16 @@ pyrcc5 qt/dg.qrc > qt/dg_rc.py
 .venv/bin/python build.py
 ```
 
-Run these commands from the repository root. The CI workflow is the canonical baseline;
-package names and dependency constraints should be adjusted based on actual Fedora 44
-job results rather than assumptions.
+Run these commands from the repository root. The CI workflow is the canonical baseline; adjust
+dependency constraints only in response to reproducible Fedora 44 failures.
 
 ## Readiness criteria
 
-Fedora 44 support is considered ready only when all of the following are true:
+Fedora 44 support is ready only when:
 
-- The full build and test workflow passes on Fedora 44.
-- The application starts and performs a basic duplicate scan in a clean desktop session.
-- The RPM installs and uninstalls cleanly and does not overwrite user data.
-- Runtime dependencies are declared, and no build-only tools are required to run the app.
-- The package's license, desktop file, icon, and installed file paths are verified.
+- The Fedora 44 build and regression-test workflow passes.
+- The application starts and performs a basic duplicate scan in a clean Fedora desktop session.
+- The RPM installs and uninstalls cleanly without overwriting user data.
+- Runtime dependencies are declared; build-only tools are not required to run the app.
+- License, desktop entry, icon, and installed file paths are verified.
 - Known limitations and tested versions are documented.
