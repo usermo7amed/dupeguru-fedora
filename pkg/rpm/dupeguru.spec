@@ -24,7 +24,7 @@ Requires:       python3
 Requires:       python3-qt5
 Requires:       python3-distro
 Requires:       python3-mutagen
-Requires:       python3-semantic-version
+Requires:       python3-semantic_version
 Requires:       python3-send2trash
 Requires:       python3-xxhash
 
