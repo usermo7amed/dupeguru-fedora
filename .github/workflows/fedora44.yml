@@ -5,6 +5,7 @@ on:
     branches:
       - fedora44-ci-packaging
       - fedora44-gnome-rpm
+      - fedora44-runtime-smoke
   pull_request:
     branches:
       - master
@@ -63,12 +64,20 @@ jobs:
           git archive --format=tar.gz --prefix="dupeguru-$VERSION/" HEAD > "rpmbuild/SOURCES/dupeguru-$VERSION.tar.gz"
           rpmbuild -bb --define "_topdir $PWD/rpmbuild" pkg/rpm/dupeguru.spec
 
+      - name: Upload Fedora RPM artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: dupeguru-fedora44-x86_64-rpm
+          path: rpmbuild/RPMS/x86_64/dupeguru-[0-9]*.rpm
+          if-no-files-found: error
+          retention-days: 30
+
       - name: Install and inspect the built RPM
         env:
           QT_QPA_PLATFORM: offscreen
         run: |
           set -eux
-          RPM="$(find rpmbuild/RPMS -type f -name 'dupeguru-*.rpm' -print -quit)"
+          RPM="$(find rpmbuild/RPMS -type f -name 'dupeguru-[0-9]*.rpm' -print -quit)"
           test -n "$RPM"
           rpm -qpl "$RPM"
           dnf -y install "$RPM"
@@ -77,5 +86,24 @@ jobs:
           test -f /usr/libexec/dupeguru/qt/dg_rc.py
           test -f /usr/share/icons/hicolor/128x128/apps/dupeguru.png
           python3 -c "import sys; sys.path.insert(0, '/usr/libexec/dupeguru'); import core, hscommon, qt.dg_rc; print('Installed application modules import successfully')"
+
+      - name: Smoke-test installed GUI startup
+        env:
+          QT_QPA_PLATFORM: offscreen
+        run: |
+          set +e
+          timeout --signal=TERM --kill-after=5s 15s /usr/bin/dupeguru > /tmp/dupeguru-launch.log 2>&1
+          status=$?
+          set -e
+          cat /tmp/dupeguru-launch.log
+          if [ "$status" -ne 124 ]; then
+            echo "Expected the GUI event loop to remain alive until timeout; exit status was $status."
+            exit 1
+          fi
+          echo "GUI process stayed alive for 15 seconds in Qt offscreen mode."
+
+      - name: Remove RPM and verify launcher cleanup
+        run: |
+          set -eux
           dnf -y remove dupeguru
           test ! -e /usr/bin/dupeguru
