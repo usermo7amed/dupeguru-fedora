@@ -1,53 +1,53 @@
-# Fedora 44 support
+# Fedora 44 / GNOME support
 
-This fork focuses on Fedora 44 and Linux. Windows/macOS CI matrices, packaging work, and platform-
-specific build instructions are out of scope. This does not mean upstream has dropped support for
-those systems; it means this fork only validates Fedora/Linux.
+This fork targets Fedora 44 with GNOME. It uses Fedora's system Python and Qt/PyQt packages and
+produces an RPM rather than installing into a developer virtual environment.
 
-## Validation stages
+## Build and test
 
-1. **Reproducible baseline:** run the `.github/workflows/fedora44.yml` workflow in a Fedora 44
-   container and record the exact failing step, Python version, Qt/PyQt versions, and dependency versions.
-2. **Python compatibility:** fix source/API and dependency constraints only where the Fedora 44
-   build or tests demonstrate a real incompatibility. Avoid unnecessary version changes.
-3. **Qt integration:** verify that the resource compiler is available, generated resources import
-   correctly, and the UI can start in a headless test environment.
-4. **Linux regression tests:** run the core/helper test suite and add focused tests for each
-   compatibility fix. Native extensions must be built for the same interpreter used by the app.
-5. **RPM packaging:** add a Fedora RPM spec after dependency and install layout are confirmed.
-   Prefer Fedora system packages for Python dependencies and Qt, declare runtime requirements,
-   install files under standard system paths, and provide a desktop entry and icon. The installed
-   package must not depend on a developer virtual environment.
-6. **Install/uninstall verification:** build the RPM in a clean Fedora 44 environment, inspect it
-   with RPM tools, install it, launch the app, verify desktop integration, and uninstall it without
-   removing user data.
-7. **Documentation/release:** document tested Fedora versions, installation/build commands, known
-   limitations, and a reproducible version/release procedure.
-
-## Local baseline
-
-Install the Fedora build tools and Qt/PyQt development packages listed in the workflow. Then run:
+Install the build dependencies listed in the repository README, then run:
 
 ```bash
-python3 -m venv --system-site-packages .venv
-.venv/bin/python -m pip install --upgrade pip setuptools wheel
-.venv/bin/python -m pip install -r requirements.txt -r requirements-extra.txt
-.venv/bin/python build.py --modules
-pyrcc5 qt/dg.qrc > qt/dg_rc.py
-.venv/bin/python -m pytest -q core hscommon
-.venv/bin/python build.py
+python3 build.py
+QT_QPA_PLATFORM=offscreen python3 -m pytest -q core hscommon
+desktop-file-validate pkg/dupeguru.desktop
 ```
 
-Run these commands from the repository root. The CI workflow is the canonical baseline; adjust
-dependency constraints only in response to reproducible Fedora 44 failures.
+## Build the RPM
+
+From the repository root, ensure the source checkout is clean and the dependencies are installed.
+The CI workflow creates a versioned source archive and builds the package with:
+
+```bash
+VERSION="$(python3 -c 'from core import __version__; print(__version__)')"
+mkdir -p rpmbuild/{BUILD,BUILDROOT,RPMS,SOURCES,SPECS,SRPMS}
+git archive --format=tar.gz --prefix="dupeguru-$VERSION/" HEAD > "rpmbuild/SOURCES/dupeguru-$VERSION.tar.gz"
+rpmbuild -bb --define "_topdir $PWD/rpmbuild" pkg/rpm/dupeguru.spec
+```
+
+Install the resulting RPM with DNF to test dependency resolution. The package provides a
+`dupeguru` launcher, a GNOME application-menu entry, and an hicolor icon. Its source and native
+extensions are installed under `/usr/libexec/dupeguru`; it does not depend on a local `.venv`.
+
+## Automated validation
+
+The Fedora 44 GitHub Actions workflow:
+
+1. Installs the Fedora build and runtime dependency packages.
+2. Builds native extensions, Qt resources, translations, and help using the system Python.
+3. Runs the core/helper regression tests with Qt in offscreen mode.
+4. Validates the desktop entry.
+5. Builds the RPM, installs it using DNF, checks installed paths and imports, and removes it again.
+
+The container cannot prove that a user can complete an interactive scan in a real GNOME session.
+Before publishing a release, manually launch the app from GNOME, scan a disposable test folder,
+verify duplicate results and trash handling, and check that user preferences/data survive an
+upgrade and are not deleted on uninstall.
 
 ## Readiness criteria
 
-Fedora 44 support is ready only when:
-
-- The Fedora 44 build and regression-test workflow passes.
-- The application starts and performs a basic duplicate scan in a clean Fedora desktop session.
-- The RPM installs and uninstalls cleanly without overwriting user data.
-- Runtime dependencies are declared; build-only tools are not required to run the app.
-- License, desktop entry, icon, and installed file paths are verified.
-- Known limitations and tested versions are documented.
+- Fedora 44 CI and RPM install/remove checks pass.
+- RPM runtime dependencies resolve through Fedora repositories.
+- The desktop entry and icon are valid and installed in standard paths.
+- The app opens in a real GNOME session and completes a basic duplicate scan.
+- License and user-data behavior are verified before publishing a release.
