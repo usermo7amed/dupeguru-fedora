@@ -28,8 +28,6 @@ Requires:       python3-semantic-version
 Requires:       python3-send2trash
 Requires:       python3-xxhash
 
-BuildArch:      x86_64
-
 %description
 dupeGuru is a cross-platform desktop tool for finding duplicate files.
 This Fedora-focused build integrates with the GNOME application menu and
@@ -69,7 +67,3 @@ install -Dpm 0644 images/dgse_logo_128.png \
 %{_datadir}/applications/dupeguru.desktop
 %{_datadir}/icons/hicolor/128x128/apps/dupeguru.png
 %{_libexecdir}/dupeguru/
-
-%changelog
-* Tue Oct 27 2026 Fedora GNOME Packaging <noreply@example.invalid> - 4.3.1-1
-- Add initial Fedora 44 RPM packaging and GNOME desktop integration.
