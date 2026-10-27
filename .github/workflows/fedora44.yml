@@ -3,9 +3,10 @@ name: Fedora 44 build
 on:
   push:
     branches:
-      - master
       - fedora44-ci-packaging
   pull_request:
+    branches:
+      - master
   workflow_dispatch:
 
 permissions:
@@ -17,7 +18,7 @@ jobs:
     container:
       image: fedora:44
     steps:
-      - name: Install system build dependencies
+      - name: Install Fedora build dependencies
         run: |
           dnf -y upgrade --refresh
           dnf -y install \
@@ -29,20 +30,20 @@ jobs:
       - name: Check out source
         uses: actions/checkout@v4
 
-      - name: Create build environment
+      - name: Create Linux build environment
         run: |
           python3 -m venv --system-site-packages .venv
           .venv/bin/python -m pip install --upgrade pip setuptools wheel
           .venv/bin/python -m pip install -r requirements.txt -r requirements-extra.txt
 
-      - name: Report toolchain
+      - name: Report Fedora toolchain
         run: |
           python3 --version
           .venv/bin/python -m pip --version
           .venv/bin/python -c "from PyQt5 import QtCore; print('Qt', QtCore.QT_VERSION_STR, 'PyQt', QtCore.PYQT_VERSION_STR)"
           command -v pyrcc5
 
-      - name: Build native extensions
+      - name: Build Linux native extensions
         run: .venv/bin/python build.py --modules
 
       - name: Build Qt resources
@@ -53,7 +54,7 @@ jobs:
       - name: Build translations
         run: .venv/bin/python build.py --loc
 
-      - name: Run test suite
+      - name: Run Linux regression tests
         env:
           QT_QPA_PLATFORM: offscreen
         run: .venv/bin/python -m pytest -q core hscommon
